@@ -61,12 +61,13 @@ context_init(PyJitContext *self, PyObject *args, PyObject *kwargs)
 
 /* Regular methods */
 
+static PyObject *context_enter(PyJitContext *self); /* Forward */
+
 static PyObject *
 context_build_start(PyJitContext *self)
 {
-    if (PyJitContext_Verify(self) < 0)
+    if (!context_enter(self))
         return NULL;
-    jit_context_build_start(self->context);
     Py_RETURN_NONE;
 }
 
@@ -175,6 +176,15 @@ context_free_meta(PyJitContext *self, PyObject *args, PyObject *kwargs)
     Py_RETURN_NONE;
 }
 
+static PyObject *
+context_enter(PyJitContext *self)
+{
+    if (PyJitContext_Verify(self) < 0)
+        return NULL;
+    jit_context_build_start(self->context);
+    return (PyObject *)self;
+}
+
 static PyMethodDef context_methods[] = {
     PYJIT_METHOD_NOARGS(context, build_start),
     PYJIT_METHOD_NOARGS(context, build_end),
@@ -183,7 +193,7 @@ static PyMethodDef context_methods[] = {
     PYJIT_METHOD_KW(context, get_meta),
     PYJIT_METHOD_KW(context, get_meta_numeric),
     PYJIT_METHOD_KW(context, free_meta),
-    PYJIT_METHOD_EX("__enter__", context_build_start, METH_NOARGS),
+    PYJIT_METHOD_EX("__enter__", context_enter, METH_NOARGS),
     PYJIT_METHOD_EX("__exit__", context_build_end, METH_VARARGS),
 
     /* TODO: Re-export jit_function_next, etc. here */

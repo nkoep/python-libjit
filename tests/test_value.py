@@ -45,10 +45,10 @@ class TestValue(unittest.TestCase):
         self.param0 | self.param1
 
     def test_marshal_constants(self):
-        context = jit.Context()
-        signature = jit.Type.create_signature(
-            jit.ABI_CDECL, jit.Type.INT, [jit.Type.INT])
-        function = jit.Function(context, signature)
-        function.insn_return(function.value_get_param(0) * 2)
-        self.assertEqual(function(110), 220)
+        with jit.Context() as context:
+            signature = jit.Type.create_signature(
+                jit.ABI_CDECL, jit.Type.INT, [jit.Type.INT])
+            function = jit.Function(context, signature)
+            function.insn_return(function.value_get_param(0) * 2)
+            self.assertEqual(function(110), 220)
 
