@@ -182,6 +182,7 @@ context_enter(PyJitContext *self)
     if (PyJitContext_Verify(self) < 0)
         return NULL;
     jit_context_build_start(self->context);
+    Py_INCREF(self);
     return (PyObject *)self;
 }
 
