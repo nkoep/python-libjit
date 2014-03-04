@@ -12,5 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from _ctypes import CFuncPtr, FUNCFLAG_CDECL
+
 from _jit import *
+
+class Closure(CFuncPtr):
+    # XXX: This should depend on the calling convention of the wrapped
+    #      function. Unfortunately it means we have to create the wrapper class
+    #      dynamically since _flags_ has to be set during class creation. We
+    #      could just cache it under the appropriate jit.ABI_* key.
+    _flags_ = FUNCFLAG_CDECL
+
+    def __new__(cls, function):
+        if not isinstance(function, jit.Function):
+            raise TypeError("function must be an instance of jit.Function")
+        if not function.is_compiled():
+            function.compile_()
+        addr = function.to_closure()
+        if addr is None:
+            raise ValueError("failed to obtain closure from function object")
+        return super(Closure, cls).__new__(cls, addr)
+
+    def __init__(self, function):
+        super(Closure, self).__init__()
+        self._function = function
+        # TODO: Use the function signature to annotate the wrapped FuncPtr.
+        import ctypes
+        self.restype = ctypes.c_int
+        self.argtypes = [ctypes.c_int]
+
+del CFuncPtr, FUNCFLAG_CDECL
 

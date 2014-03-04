@@ -259,7 +259,6 @@ _function_iter(
     Py_RETURN_NONE;
 }
 
-
 static PyObject *
 function_next(void *null, PyObject *args, PyObject *kwargs)
 {
@@ -277,9 +276,36 @@ function_previous(void *null, PyObject *args, PyObject *kwargs)
 static PyObject *
 function_get_nested_parent(PyJitFunction *self)
 {
-    jit_function_t parent = jit_function_get_nested_parent(self->function);
+    jit_function_t parent;
+
+    if (PyJitFunction_Verify(self) < 0)
+        return NULL;
+    parent = jit_function_get_nested_parent(self->function);
     if (parent)
         return PyJitFunction_New(parent);
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+function_is_compiled(PyJitFunction *self)
+{
+    if (PyJitFunction_Verify(self) < 0)
+        return NULL;
+    return PyBool_FromLong(jit_function_is_compiled(self->function));
+}
+
+/* ... */
+
+static PyObject *
+function_to_closure(PyJitFunction *self)
+{
+    void *closure;
+
+    if (PyJitFunction_Verify(self) < 0)
+        return NULL;
+    closure = jit_function_to_closure(self->function);
+    if (closure)
+        return PyLong_FromVoidPtr(closure);
     Py_RETURN_NONE;
 }
 
@@ -395,7 +421,6 @@ function_value_get_param(PyJitFunction *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
     return PyJitValue_New(value, (PyObject *)self);
-
 }
 
 /* Re-exported methods of jit.Insn */
@@ -537,11 +562,11 @@ static PyMethodDef function_methods[] = {
     /* jit_function_get_entry */
     /* jit_function_get_current */
     PYJIT_METHOD_NOARGS(function, get_nested_parent),
-    /* jit_function_is_compiled */
+    PYJIT_METHOD_NOARGS(function, is_compiled),
     /* jit_function_set_recompilable */
     /* jit_function_clear_recompilable */
     /* jit_function_is_recompilable */
-    /* jit_function_to_closure XXX: Omitted */
+    PYJIT_METHOD_NOARGS(function, to_closure),
     /* jit_function_from_closure */
     /* jit_function_from_pc */
     /* jit_function_to_vtable_pointer */

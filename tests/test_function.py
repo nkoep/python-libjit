@@ -42,3 +42,12 @@ class TestFunction(unittest.TestCase):
             context, signature, parent=self.function)
         self.assertEqual(nested_function.get_nested_parent(), self.function)
 
+    def test_closure(self):
+        with jit.Context() as context:
+            signature = jit.Type.create_signature(
+                jit.ABI_CDECL, jit.Type.INT, (jit.Type.INT,))
+            function = jit.Function(context, signature)
+            function.insn_return(function.value_get_param(0) * 3)
+            closure = jit.Closure(function)
+            self.assertEqual(closure(5), 15)
+
