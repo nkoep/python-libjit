@@ -15,7 +15,7 @@ class TestType(unittest.TestCase):
 
     def test_create_signature(self):
         signature = jit.Type.create_signature(
-            jit.ABI_FASTCALL, jit.Type.INT, (jit.Type.INT,))
+            jit.ABI_FASTCALL, None, (jit.Type.INT,))
         self.assertIsInstance(signature, jit.Type)
         self.assertTrue(signature.is_signature)
 

@@ -129,22 +129,27 @@ type_create_signature(void *null, PyObject *args, PyObject *kwargs)
     int abi, incref = 1, r;
     unsigned int i, num_params;
     PyObject *return_type = NULL, *params = NULL, *retval = NULL;
-    PyJitType *jit_return_type;
-    jit_type_t *jit_params;
+    jit_type_t jit_return_type, *jit_params;
     static char *kwlist[] = { "abi", "return_type", "params", NULL };
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iOO:Type", kwlist, &abi,
                                      &return_type, &params))
         return NULL;
 
-    jit_return_type = PyJitType_Cast(return_type);
-    if (!jit_return_type) {
-        pyjit_raise_type_error("return_type", pyjit_type_get_pytype(),
-                               return_type);
-        return NULL;
+    if (return_type == Py_None) {
+        jit_return_type = jit_type_void;
     }
-    if (PyJitType_Verify(jit_return_type) < 0)
-        return NULL;
+    else {
+        PyJitType *rt = PyJitType_Cast(return_type);
+        if (!rt) {
+            pyjit_raise_type_error("return_type", pyjit_type_get_pytype(),
+                                   return_type);
+            return NULL;
+        }
+        if (PyJitType_Verify(rt) < 0)
+            return NULL;
+        jit_return_type = rt->type;
+    }
 
     r = PySequence_Check(params);
     if (r < 0) {
@@ -183,7 +188,7 @@ type_create_signature(void *null, PyObject *args, PyObject *kwargs)
     /* We didn't break from the loop prematurely, so we're good to go. */
     if (i == num_params) {
         jit_type_t signature = jit_type_create_signature(
-            abi, jit_return_type->type, jit_params, num_params, incref);
+            abi, jit_return_type, jit_params, num_params, incref);
         if (signature) {
             retval = PyJitType_New(signature);
         }
