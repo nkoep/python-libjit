@@ -303,6 +303,11 @@ function_to_closure(PyJitFunction *self)
 
     if (PyJitFunction_Verify(self) < 0)
         return NULL;
+    if (!jit_supports_closures()) {
+        PyErr_SetString(PyExc_RuntimeError,
+                        "closures are not supported on this platform");
+        return NULL;
+    }
     closure = jit_function_to_closure(self->function);
     if (closure)
         return PyLong_FromVoidPtr(closure);
