@@ -17,7 +17,7 @@ class TestType(unittest.TestCase):
         signature = jit.Type.create_signature(
             jit.ABI_FASTCALL, None, (jit.Type.INT,))
         self.assertIsInstance(signature, jit.Type)
-        self.assertTrue(signature.is_signature)
+        self.assertTrue(signature.is_signature())
 
     def test_create_pointer(self):
         pointer = jit.Type.INT.create_pointer()
