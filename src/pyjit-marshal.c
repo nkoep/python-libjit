@@ -42,6 +42,7 @@ case JIT_TYPE_##name:           \
     CASE(UNION)
     CASE(SIGNATURE)
     CASE(PTR)
+    CASE(FIRST_TAGGED)
     default:
         break;
     }
@@ -149,11 +150,43 @@ pyjit_marshal_arg_to_py(jit_type_t type, void *arg)
     PyObject *retval = NULL;
     int kind;
 
+    /* XXX: This probably needs some compile-time tests to marshal all types
+     *      properly.
+     */
     kind = jit_type_get_kind(type);
     switch (kind) {
+    case JIT_TYPE_VOID:
+        Py_INCREF(Py_None);
+        retval = Py_None;
+        break;
+
+    case JIT_TYPE_SBYTE:
+    case JIT_TYPE_SHORT:
     case JIT_TYPE_INT:
         retval = PyInt_FromLong(*(int *)arg);
         break;
+
+    case JIT_TYPE_UBYTE:
+    case JIT_TYPE_USHORT:
+    case JIT_TYPE_UINT:
+        retval = PyInt_FromSize_t(*(unsigned int *)arg);
+        break;
+
+    case JIT_TYPE_NINT:
+    case JIT_TYPE_LONG:
+        retval = PyLong_FromLong(*(long *)arg);
+        break;
+
+    case JIT_TYPE_NUINT:
+    case JIT_TYPE_ULONG:
+        retval = PyLong_FromUnsignedLong(*(unsigned long *)arg);
+        break;
+
+    case JIT_TYPE_FLOAT32:
+    case JIT_TYPE_FLOAT64:
+        retval = PyFloat_FromDouble(*(double *)arg);
+        break;
+
     default:
         _marshaling_error(kind);
         break;
