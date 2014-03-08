@@ -44,6 +44,12 @@ pyjit_supports_virtual_memory(void *null)
     return PyBool_FromLong(jit_supports_virtual_memory());
 }
 
+static PyObject *
+pyjit_supports_closures(void *null)
+{
+    return PyBool_FromLong(jit_supports_closures());
+}
+
 static PyFileObject *
 _to_file_object(PyObject *o)
 {
@@ -238,6 +244,7 @@ static PyMethodDef pyjit_methods[] = {
     PYJIT_METHOD_NOARGS(pyjit, uses_interpreter),
     PYJIT_METHOD_NOARGS(pyjit, supports_threads),
     PYJIT_METHOD_NOARGS(pyjit, supports_virtual_memory),
+    PYJIT_METHOD_NOARGS(pyjit, supports_closures),
 
     /* Diagnostic routines */
     PYJIT_METHOD_KW(pyjit, dump_type),

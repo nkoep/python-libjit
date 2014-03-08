@@ -5,6 +5,7 @@ class TestJitFunctions(unittest.TestCase):
         self.assertIsInstance(jit.uses_interpreter(), bool)
         self.assertIsInstance(jit.supports_threads(), bool)
         self.assertIsInstance(jit.supports_virtual_memory(), bool)
+        self.assertIsInstance(jit.supports_closures(), bool)
 
     def test_diagnostic_routines(self):
         import os
