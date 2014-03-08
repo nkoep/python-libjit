@@ -85,9 +85,12 @@ pyjit_dump_type(void *null, PyObject *args, PyObject *kwargs)
         return NULL;
     PyFile_IncUseCount(fo);
 
+    Py_INCREF(type);
     Py_BEGIN_ALLOW_THREADS
     jit_dump_type(fp, type_);
     Py_END_ALLOW_THREADS
+    Py_DECREF(type);
+
     PyFile_DecUseCount(fo);
 
     Py_RETURN_NONE;
@@ -129,9 +132,16 @@ pyjit_dump_value(void *null, PyObject *args, PyObject *kwargs)
         return NULL;
     PyFile_IncUseCount(fo);
 
+    /* If func is dereferenced by another thread during I/O, it may call
+     * jit_function_abandon in the process and destroy memory jit_dump_value is
+     * still accessing. To remove this possibility, incref func here.
+     */
+    Py_INCREF(func);
     Py_BEGIN_ALLOW_THREADS
     jit_dump_value(fp, function, value_, prefix);
     Py_END_ALLOW_THREADS
+    Py_DECREF(func);
+
     PyFile_DecUseCount(fo);
 
     Py_RETURN_NONE;
@@ -172,9 +182,13 @@ pyjit_dump_insn(void *null, PyObject *args, PyObject *kwargs)
         return NULL;
     PyFile_IncUseCount(fo);
 
+    /* TODO: Do have to keep a strong temp ref to insn here? */
+    Py_INCREF(func);
     Py_BEGIN_ALLOW_THREADS
     jit_dump_insn(fp, function, insn_);
     Py_END_ALLOW_THREADS
+    Py_DECREF(func);
+
     PyFile_DecUseCount(fo);
 
     Py_RETURN_NONE;
@@ -209,9 +223,12 @@ pyjit_dump_function(void *null, PyObject *args, PyObject *kwargs)
         return NULL;
     PyFile_IncUseCount(fo);
 
+    Py_INCREF(func);
     Py_BEGIN_ALLOW_THREADS
     jit_dump_function(fp, function, name);
     Py_END_ALLOW_THREADS
+    Py_DECREF(func);
+
     PyFile_DecUseCount(fo);
 
     Py_RETURN_NONE;
