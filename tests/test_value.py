@@ -50,5 +50,5 @@ class TestValue(unittest.TestCase):
                 jit.ABI_CDECL, jit.Type.INT, [jit.Type.INT])
             function = jit.Function(context, signature)
             function.insn_return(function.value_get_param(0) * 2)
-            self.assertEqual(function(110), 220)
+        self.assertEqual(function(110), 220)
 

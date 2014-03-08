@@ -42,6 +42,15 @@ class TestFunction(unittest.TestCase):
             context, signature, parent=self.function)
         self.assertEqual(nested_function.get_nested_parent(), self.function)
 
+    def test_signature_with_void_argument(self):
+        with jit.Context() as context:
+            signature = jit.Type.create_signature(
+                jit.ABI_CDECL, jit.Type.INT, [jit.Type.VOID, jit.Type.INT])
+            function = jit.Function(context, signature)
+            function.insn_return(function.value_get_param(1))
+            arg = 220
+        self.assertEqual(function(None, arg), arg)
+
     def test_closure(self):
         with jit.Context() as context:
             signature = jit.Type.create_signature(

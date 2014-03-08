@@ -77,7 +77,14 @@ function_call(PyJitFunction *self, PyObject *args, PyObject *kwargs)
         return NULL;
 
     do {
-        PyObject *r = function_compile(self);
+        jit_context_t context;
+        PyObject *r;
+
+        context = jit_function_get_context(self->function);
+        assert(context);
+        jit_context_build_start(context);
+        r = function_compile(self);
+        jit_context_build_end(context);
         if (!r)
             return NULL;
         Py_DECREF(r);
