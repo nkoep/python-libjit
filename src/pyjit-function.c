@@ -76,8 +76,12 @@ function_call(PyJitFunction *self, PyObject *args, PyObject *kwargs)
     if (PyJitFunction_Verify(self) < 0)
         return NULL;
 
-    if (!function_compile(self))
-        return NULL;
+    do {
+        PyObject *r = function_compile(self);
+        if (!r)
+            return NULL;
+        Py_DECREF(r);
+    } while (0);
 
     /* Wrap the argument tuple in another tuple so that the argument to
      * jit.Function.apply_ appears to be a sequence once args_ gets unpacked by
