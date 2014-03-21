@@ -52,3 +52,22 @@ class TestValue(unittest.TestCase):
             function.insn_return(function.value_get_param(0) * 2)
         self.assertEqual(function(110), 220)
 
+    def test_invalidate_values(self):
+        # TODO
+        return
+        with jit.Context() as context:
+            signature = jit.Type.create_signature(
+                jit.ABI_CDECL, jit.Type.INT, [jit.Type.INT])
+            function = jit.Function(context, signature)
+            value = function.value_get_param(0) * 2
+            function.insn_return(value)
+        # XXX: This should invalidate any jit.Value instances created during
+        #      the creation of `function'! jit.Function.__call__ calls
+        #      `jit_function_compile' internally if necessary which frees all
+        #      resources allocated in the respective jit_function_t, including
+        #      any temporary jit_value_t pointers. The only way around this
+        #      seems to be to keep track of jit.Value references inside
+        #      jit.Function and invalidate them as soon as a function is
+        #      compiled.
+        self.assertEqual(function(110), 220)
+

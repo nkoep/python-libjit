@@ -327,6 +327,14 @@ function_to_closure(PyJitFunction *self)
 
 /* ... */
 
+/* TODO: We need to track the construction of values, instructions, etc. inside
+ *       JIT'able functions. When `jit_function_compile' is invoked, LibJIT
+ *       discards any resources allocated for building a function. This means
+ *       we'll end up with wrapper objects for jit.Value, etc. which now wrap
+ *       dangling pointers. The least we can do in these situations is to set
+ *       said pointers to NULL so that our PyJit*_Verify routines complain if
+ *       wrapper objects are re-used.
+ */
 static PyObject *
 function_compile(PyJitFunction *self)
 {
