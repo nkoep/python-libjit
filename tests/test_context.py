@@ -1,5 +1,7 @@
 import unittest
 
+import jit
+
 class TestContext(unittest.TestCase):
     def test_constructors(self):
         jit.Context()

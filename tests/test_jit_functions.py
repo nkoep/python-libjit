@@ -1,5 +1,7 @@
 import unittest
 
+import jit
+
 class TestJitFunctions(unittest.TestCase):
     def test_jit_functions(self):
         self.assertIsInstance(jit.uses_interpreter(), bool)

@@ -1,5 +1,7 @@
 import unittest
 
+import jit
+
 class TestAbi(unittest.TestCase):
     def test_constants(self):
         # See LibJIT's jit-type.h for these values.

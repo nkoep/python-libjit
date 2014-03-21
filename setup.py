@@ -21,12 +21,11 @@ class BuildAndInjectModule(build):
         # Build the module first.
         build.run(self)
 
-        # Inject the jit module.
+        # Add the build directory to the module search path.
         import imp
-        file_, pathname, description = imp.find_module(
+        _, pathname, _ = imp.find_module(
             "jit", [os.path.join(os.getcwd(), self.build_lib)])
-        jit = imp.load_module("jit", file_, pathname, description)
-        __builtins__.__dict__["jit"] = jit
+        sys.path.append(os.path.dirname(pathname))
 
 class Test(BuildAndInjectModule):
     description = "run the test suite"

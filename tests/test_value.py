@@ -1,5 +1,7 @@
 import unittest
 
+import jit
+
 class TestValue(unittest.TestCase):
     def setUp(self):
         self.context = jit.Context()

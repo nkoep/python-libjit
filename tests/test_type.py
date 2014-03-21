@@ -1,5 +1,7 @@
 import unittest
 
+import jit
+
 class TestType(unittest.TestCase):
     def test_constructors(self):
         with self.assertRaises(TypeError):
