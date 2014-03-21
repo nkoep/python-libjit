@@ -28,8 +28,8 @@ class TestFunction(unittest.TestCase):
     def test_function_previous(self):
         context = self.function.get_context()
         self.assertEqual(jit.Function.previous(context), self.function2)
-        self.assertEqual(jit.Function.previous(context, self.function2),
-                         self.function)
+        self.assertEqual(
+            jit.Function.previous(context, self.function2), self.function)
         with self.assertRaises(TypeError):
             jit.Function.previous(0)
         with self.assertRaises(TypeError):
@@ -59,4 +59,42 @@ class TestFunction(unittest.TestCase):
             function.insn_return(function.value_get_param(0) * 3)
             closure = jit.Closure(function)
             self.assertEqual(closure(5), 15)
+
+    def test_decorator(self):
+        context = jit.Context()
+        signature = jit.Type.create_signature(
+            jit.ABI_CDECL, jit.Type.INT, [jit.Type.INT])
+
+        # Varargs are forbidden.
+        with self.assertRaises(ValueError):
+            @jit.builds_function(context, signature)
+            def func(x, *args):
+                pass
+
+        # Keyword arguments are forbidden.
+        with self.assertRaises(ValueError):
+            @jit.builds_function(context, signature)
+            def func(x, **kwargs):
+                pass
+
+        # Default arguments are forbidden.
+        with self.assertRaises(ValueError):
+            @jit.builds_function(context, signature)
+            def func(x=None):
+                pass
+
+        # Error out when the function expects another number of arguments than
+        # than the jit.Type function signature says. Note that jit.Type.VOID is
+        # a valid argument in LibJIT.
+        with self.assertRaises(ValueError):
+            @jit.builds_function(context, signature)
+            def func():
+                pass
+
+        @jit.builds_function(context, signature)
+        def func(x):
+            for i in range(5):
+                x *= 2
+            return x
+        self.assertEqual(func(1), 32)
 
