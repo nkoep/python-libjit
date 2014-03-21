@@ -31,9 +31,7 @@ from _jit import *
 #      it here, the type will always be initialized properly. The only problem
 #      is that users could theoretically import _jit.Context manually.
 def builds_function(context, signature):
-    function = Function(context, signature)
     num_params = signature.num_params()
-    args = [function.value_get_param(i) for i in range(num_params)]
 
     def decorator(f):
         argspec = inspect.getargspec(f)
@@ -55,26 +53,32 @@ def builds_function(context, signature):
         # This seems like an arbitrary constraint. However, it'd be too easy
         # for the user to misinterpret default arguments as something that gets
         # passed to the JIT'ed function when it's called when in fact they are
-        # only used during construction of the JIT function body. The unusual
-        # thing about this decorator is that it calls the decorated function
-        # immediately and actually returns the JIT-compiled version instead of
-        # deferring the call until its actual invocation.
+        # only used during construction of the JIT'ed function.
         if argspec.defaults is not None:
             raise ValueError(
                 "decorated function must not use default arguments")
 
-        function.insn_return(f(*args))
-        function.compile_()
-        try:
-            # Assigning to `function' here shadows the original assignment and
-            # raises an UnboundLocalError exception.
-            jit_function = Closure(function)
-        except ValueError:
-            jit_function = function
+        cache = {}
+        def get_compiled_function():
+            try:
+                function = cache["function"]
+            except KeyError:
+                function = Function(context, signature)
+                args = [function.value_get_param(i) for i in range(num_params)]
+                function.insn_return(f(*args))
+                function.compile_()
+                try:
+                    # Assigning to `function' here shadows the original
+                    # assignment and raises an UnboundLocalError exception.
+                    function = Closure(function)
+                except ValueError:
+                    pass
+                cache["function"] = function
+            return function
 
         @wraps(f)
         def wrapper(*args):
-            return jit_function(*args)
+            return get_compiled_function()(*args)
         return wrapper
     return decorator
 
