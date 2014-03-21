@@ -31,7 +31,7 @@ from _jit import *
 #      it here, the type will always be initialized properly. The only problem
 #      is that users could theoretically import _jit.Context manually.
 def builds_function(context, signature):
-    function = jit.Function(context, signature)
+    function = Function(context, signature)
     num_params = signature.num_params()
     args = [function.value_get_param(i) for i in range(num_params)]
 
@@ -86,7 +86,7 @@ class Closure(CFuncPtr):
     _flags_ = FUNCFLAG_CDECL
 
     def __new__(cls, function):
-        if not isinstance(function, jit.Function):
+        if not isinstance(function, Function):
             raise TypeError("function must be an instance of jit.Function")
         if not function.is_compiled():
             function.compile_()
