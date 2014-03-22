@@ -24,6 +24,10 @@ typedef jit_value_t (*pyjit_binaryfunc)(
 
 typedef struct {
     PyObject_HEAD
+    /* XXX: An insn is owned by a jit_block_t which in turn is owned by a
+     *      jit_function_t. The function field should thus be changed to a
+     *      block field once the jit.Block type is available.
+     */
     PyObject *function;
     jit_insn_t insn;
     PyObject *weakreflist;

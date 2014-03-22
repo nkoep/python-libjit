@@ -20,15 +20,27 @@
 #include "pyjit-type.h"
 #include "pyjit-value.h"
 
-static PyObject *insn_get_function(PyJitInsn *self); /* Forward */
-
 PyDoc_STRVAR(insn_doc, "Wrapper class for jit_insn_t");
+
+static PyObject *insn_cache = NULL;
 
 /* Slot implementations */
 
 void
 insn_dealloc(PyJitInsn *self)
 {
+    if (self->weakreflist)
+        PyObject_ClearWeakRefs((PyObject *)self);
+
+    if (self->insn) {
+        PYJIT_BEGIN_ALLOW_EXCEPTION
+        if (pyjit_weak_cache_delitem(insn_cache, (long)self->insn) < 0) {
+            PYJIT_TRACE("this shouldn't have happened");
+            abort();
+        }
+        PYJIT_END_ALLOW_EXCEPTION
+    }
+
     Py_XDECREF(self->function);
     Py_TYPE(self)->tp_free((PyObject *)self);
 }
@@ -44,6 +56,8 @@ insn_get_opcode(PyJitInsn *self)
 {
     return PyInt_FromLong(jit_insn_get_opcode(self->insn));
 }
+
+static PyObject *insn_get_function(PyJitInsn *self); /* Forward */
 
 static PyObject *
 _value_new(PyJitInsn *self, jit_value_t value)
@@ -854,7 +868,6 @@ static PyMethodDef insn_methods[] = {
     { NULL } /* Sentinel */
 };
 
-/* TODO: Make jit.Insn weak-referencable. */
 static PyTypeObject PyJitInsn_Type = {
     PyObject_HEAD_INIT(NULL)
     0,                                  /* ob_size */
@@ -882,7 +895,7 @@ static PyTypeObject PyJitInsn_Type = {
     0,                                  /* tp_traverse */
     0,                                  /* tp_clear */
     0,                                  /* tp_richcompare */
-    0,                                  /* tp_weaklistoffset */
+    offsetof(PyJitInsn, weakreflist),   /* tp_weaklistoffset */
     0,                                  /* tp_iter */
     0,                                  /* tp_iternext */
     insn_methods                        /* tp_methods */
@@ -893,6 +906,12 @@ pyjit_insn_init(PyObject *module)
 {
     if (PyType_Ready(&PyJitInsn_Type) < 0)
         return -1;
+
+    /* Set up the instruction cache. */
+    insn_cache = PyDict_New();
+    if (!insn_cache)
+        return -1;
+
     Py_INCREF(&PyJitInsn_Type);
     PyModule_AddObject(module, "Insn", (PyObject *)&PyJitInsn_Type);
 
@@ -964,14 +983,25 @@ pyjit_insn_binary_method(PyObject *func, PyObject *value1, PyObject *value2,
 PyObject *
 PyJitInsn_New(jit_insn_t insn, PyObject *function)
 {
+    long numkey;
     PyObject *object;
-    PyJitInsn *instruction;
 
-    object = PyType_GenericNew(&PyJitInsn_Type, NULL, NULL);
-    instruction = (PyJitInsn *)object;
-    instruction->insn = insn;
-    Py_INCREF(function);
-    instruction->function = function;
+    numkey = (long)insn;
+    object = pyjit_weak_cache_getitem(insn_cache, numkey);
+    if (!object) {
+        PyJitInsn *instruction;
+
+        object = PyType_GenericNew(&PyJitInsn_Type, NULL, NULL);
+        instruction = (PyJitInsn *)object;
+        instruction->insn = insn;
+        Py_INCREF(function);
+        instruction->function = function;
+
+        if (pyjit_weak_cache_setitem(insn_cache, numkey, object) < 0) {
+            Py_DECREF(object);
+            return NULL;
+        }
+    }
     return object;
 }
 
