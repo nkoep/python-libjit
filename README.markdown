@@ -5,6 +5,9 @@ This project provides static Python bindings for
 just-in-time compiler functionality to Python.
 
 ## Project Status
+[![Build
+Status](https://travis-ci.org/nkoep/python-libjit.svg?branch=master)](https://travis-ci.org/nkoep/python-libjit)
+
 This is an experimental project which currently only targets Python 2; support
 for py3k may be added eventually. The documentation below may be incomplete or
 inaccurate in parts; certain parts may outline planned rather than actual
