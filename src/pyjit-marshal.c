@@ -16,7 +16,7 @@
 #include "pyjit-marshal.h"
 
 const char *
-_type_name(int kind)
+_kind_name(int kind)
 {
 #define CASE(name)              \
 case JIT_TYPE_##name:           \
@@ -54,42 +54,53 @@ case JIT_TYPE_##name:           \
 static int
 _marshaling_error(int kind)
 {
-    const char *kind_name = _type_name(kind);
-    if (kind_name) {
-        PyErr_Format(
-            PyExc_TypeError,
-            "failed to marshal argument to jit_type_t of kind '%s'",
-            kind_name);
-    }
-    else {
-        PyErr_Format(
-            PyExc_TypeError,
-            "failed to marshal argument to jit_type_t of kind '%d'", kind);
-    }
+    const char *kind_name = _kind_name(kind);
+    static const char *header = "failed to marshal argument to jit_type_t of "
+                                "kind";
+
+    if (kind_name)
+        PyErr_Format(PyExc_TypeError, "%s '%s'", header, kind_name);
+    else
+        PyErr_Format(PyExc_TypeError, "%s '%d'", header, kind);
+    return -1;
+}
+
+static int
+_marshaling_type_error(const char *type, PyObject *o)
+{
+    PyErr_Format(PyExc_TypeError,
+                 "argument expected to be of type %s, not %.100s", type,
+                 Py_TYPE(o)->tp_name);
     return -1;
 }
 
 static int
 _marshal_arg_from_py(PyObject *o, jit_type_t type, void **out_arg)
 {
-    int kind;
+    unsigned long size;
     void *arg;
+    int kind;
 
-    *out_arg = NULL;
-
+    /* This will return 0 for jit_type_void which is fine for `PyMem_Free' as
+     * the function performs NULL checks.
+     */
+    size = jit_type_get_size(type);
+    arg = PyMem_Malloc(size);
     kind = jit_type_get_kind(type);
     switch (kind) {
+    case JIT_TYPE_VOID:
+        break;
+
+    case JIT_TYPE_SBYTE:
+    case JIT_TYPE_UBYTE:
+
+    /* TODO: Perform proper range checks. */
     case JIT_TYPE_INT:
-        if (!PyInt_Check(o)) {
-            PyErr_Format(
-                PyExc_TypeError,
-                "argument expected to be of type int, not %.100s",
-                Py_TYPE(o)->tp_name);
-            return -1;
-        }
-        arg = PyMem_Malloc(jit_type_get_size(type));
+        if (!PyInt_Check(o))
+            return _marshaling_type_error(PyInt_Type.tp_name, o);
         *(int *)arg = PyLong_AsLong(o);
         break;
+
     default:
         return _marshaling_error(kind);
     }
@@ -109,6 +120,8 @@ pyjit_marshal_arg_list_from_py(
 
     num_params = jit_type_num_params(signature);
     args_ = PyMem_New(void *, num_params);
+    memset(args, 0, num_params);
+
     for (i = 0; i < num_params; i++) {
         int r;
         PyObject *item;
@@ -126,7 +139,7 @@ pyjit_marshal_arg_list_from_py(
 
     if (i != num_params) {
         /* Free the arguments allocated so far. */
-        pyjit_marshal_free_arg_list(args_, i);
+        pyjit_marshal_free_arg_list(args_, num_params);
         return -1;
     }
 
@@ -156,8 +169,8 @@ pyjit_marshal_arg_to_py(jit_type_t type, void *arg)
     kind = jit_type_get_kind(type);
     switch (kind) {
     case JIT_TYPE_VOID:
-        Py_INCREF(Py_None);
         retval = Py_None;
+        Py_INCREF(retval);
         break;
 
     case JIT_TYPE_SBYTE:
