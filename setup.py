@@ -9,6 +9,7 @@ from distutils.command.build_ext import build_ext
 
 CFLAGS_DEBUG = "-O0 -g3 -ggdb -DPYJIT_DEBUG".split()
 
+
 class BuildExt(build_ext):
     def finalize_options(self):
         build_ext.finalize_options(self)
@@ -25,7 +26,9 @@ class BuildAndInjectModule(build):
         import imp
         _, pathname, _ = imp.find_module(
             "jit", [os.path.join(os.getcwd(), self.build_lib)])
-        sys.path.append(os.path.dirname(pathname))
+        builddir = os.path.dirname(pathname)
+        if builddir not in sys.path:
+            sys.path.append(builddir)
 
 class Test(BuildAndInjectModule):
     description = "run the test suite"
@@ -55,6 +58,7 @@ class Tutorials(BuildAndInjectModule):
                     "tutorials.%s" % os.path.splitext(file_)[0])
                 sys.stdout.write("running tutorial '%s': " % file_)
                 mod.run()
+
 
 if __name__ == "__main__":
     NAME = "python-libjit"
