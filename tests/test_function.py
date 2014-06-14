@@ -86,8 +86,8 @@ class TestFunction(unittest.TestCase):
                 pass
 
         # Error out when the function expects another number of arguments than
-        # than the jit.Type function signature says. Note that jit.Type.VOID is
-        # a valid argument in LibJIT.
+        # the jit.Type function signature says. Note that jit.Type.VOID is a
+        # valid argument in LibJIT.
         with self.assertRaises(ValueError):
             @jit.builds_function(context, signature)
             def func():
