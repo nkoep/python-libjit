@@ -1,5 +1,7 @@
 """One-to-one translation of t1.c"""
 
+import jit
+
 def run():
     # Create a context to hold the JIT's primary state.
     context = jit.Context()

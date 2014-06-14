@@ -1,11 +1,9 @@
 """Translation of t1.c with syntactic sugar"""
 
-def run():
-    # Create a context to hold the JIT's primary state.
-    context = jit.Context()
+import jit
 
-    # Lock the context while we build the function using a context manager.
-    with context:
+def run():
+    with jit.Context() as context:
         # Build the function signature.
         signature = jit.Type.create_signature(
             jit.ABI_CDECL, jit.Type.INT, [jit.Type.INT] * 3)
