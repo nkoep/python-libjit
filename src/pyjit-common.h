@@ -34,7 +34,7 @@
 #define PYJIT_END_ALLOW_EXCEPTION                               \
     if (_have_error)                                            \
         PyErr_Restore(_err_type, _err_value, _err_traceback);   \
-    }
+}
 
 #define PYJIT_METHOD_EX(name, symbol, flags) \
 { name, (PyCFunction)symbol, flags, NULL }

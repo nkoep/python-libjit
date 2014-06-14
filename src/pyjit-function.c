@@ -327,13 +327,13 @@ function_to_closure(PyJitFunction *self)
 
 /* ... */
 
-/* TODO: We need to track the construction of values, instructions, etc. inside
- *       JIT'able functions. When `jit_function_compile' is invoked, LibJIT
- *       discards any resources allocated for building a function. This means
- *       we'll end up with wrapper objects for jit.Value, etc. which now wrap
- *       dangling pointers. The least we can do in these situations is to set
- *       said pointers to NULL so that our PyJit*_Verify routines complain if
- *       wrapper objects are re-used.
+/* FIXME: We need to track the construction of values, instructions, etc.
+ *        inside JIT'able functions. When `jit_function_compile' is invoked,
+ *        LibJIT discards any resources allocated for building a function. This
+ *        means we'll end up with wrapper objects for jit.Value, etc. which now
+ *        wrap dangling pointers. The best we can do in these situations is to
+ *        set said pointers to NULL so that our PyJit*_Verify routines complain
+ *        if wrapper objects are re-used.
  */
 static PyObject *
 function_compile(PyJitFunction *self)
@@ -429,9 +429,9 @@ function_value_get_param(PyJitFunction *self, PyObject *args, PyObject *kwargs)
                                      &param))
         return NULL;
 
-    /* FIXME: libjit doesn't perform range checks in jit_value_get_param(), so
-     *        we have to do it manually here. A patch is available upstream.
-     *        Remove this check if/once it has been merged.
+    /* XXX: libjit doesn't perform range checks in jit_value_get_param(), so
+     *      we have to do it manually here. A patch is available upstream.
+     *      Remove this check if/once it has been merged.
      */
     num_params = jit_type_num_params(
         jit_function_get_signature(self->function));

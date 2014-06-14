@@ -188,7 +188,7 @@ pyjit_dump_insn(void *null, PyObject *args, PyObject *kwargs)
         return NULL;
     PyFile_IncUseCount(fo);
 
-    /* TODO: Do have to keep a strong temp ref to insn here? */
+    /* XXX: Do we have to keep a strong reference to insn here? */
     Py_INCREF(func);
     Py_BEGIN_ALLOW_THREADS
     jit_dump_insn(fp, function, insn_);

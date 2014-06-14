@@ -68,8 +68,6 @@ def builds_function(context, signature):
                 function.insn_return(f(*args))
                 function.compile_()
                 try:
-                    # Assigning to `function' here shadows the original
-                    # assignment and raises an UnboundLocalError exception.
                     function = Closure(function)
                 except ValueError:
                     pass
