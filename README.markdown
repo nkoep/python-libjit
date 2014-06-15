@@ -126,7 +126,7 @@ Another convenient feature is automatic coercion of constants. Consider a unary
 function which doubles its input argument. One way to construct such a function
 body is
 ```python
-y = x * jit.Value.create_nint_constant(2)
+y = x * jit.Value.create_nint_constant(func, jit.Type.INT, 2)
 func.insn_return(y)
 ```
 However, numeric constants in expressions involving `jit.Value` are
