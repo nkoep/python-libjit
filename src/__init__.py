@@ -141,26 +141,47 @@ class Closure(_CFuncPtr):
         self.argtypes = [self._convert_libjit_to_ctypes(signature.get_param(i))
                          for i in range(signature.num_params())]
 
-    def _convert_libjit_to_ctypes(self, type_):
-        if type_.is_primitive():
-            try:
-                return self._LIBJIT_TO_CTYPES[type_]
-            except KeyError:
-                pass
-        elif type_.is_pointer():
+    @staticmethod
+    def _convert_libjit_to_ctypes(type_):
+        try:
+            return Closure._LIBJIT_TO_CTYPES[type_]
+        except KeyError:
+            pass
+        if type_.is_pointer():
             ref_type = type_.get_ref()
-            return ctypes.POINTER(self._convert_libjit_to_ctypes(ref_type))
+            return ctypes.POINTER(Closure._convert_libjit_to_ctypes(ref_type))
         elif type_.is_struct():
-            self._create_aggregate_type(ctypes.Structure, type_)
+            return Closure._create_aggregate_type(ctypes.Structure, type_)
         elif type_.is_union():
-            self._create_aggregate_type(ctypes.Union, type_)
+            return Closure._create_aggregate_type(ctypes.Union, type_)
+        # TODO: Test if the type is tagged with jit.TYPETAG_NAME to obtain a
+        #       proper name for the exception.
         raise ValueError(
-            "failed to determine ctypes equivalent of jit.Type '%s'" %
-            type_.get_name())
+            "failed to determine ctypes conversion for '%s'" % type_)
 
-    def _create_aggregate_type(self, base_class, type_):
-        fields = [self._convert_libjit_to_ctypes(type_.get_field(i))
-                  for i in range(type_.num_fields())]
+    @staticmethod
+    def _create_aggregate_type(base_class, type_):
+        num_anonymous = 0
+        names = set()
+        fields = []
+        for i in range(type_.num_fields()):
+            name = type_.get_name(i)
+            # If no name was set for the field, use `num_anonymous' instead. To
+            # avoid name collisions, we keep track of already used names.
+            if name is None:
+                while True:
+                    name = str(num_anonymous)
+                    num_anonymous += 1
+                    if name not in names:
+                        break
+            elif name in names:
+                raise ValueError(
+                    "multiple fields with the name '%s' defined" % name)
+            names.add(name)
+
+            field = type_.get_field(i)
+            fields.append((name, Closure._convert_libjit_to_ctypes(field)))
+
         type_name = "struct" if base_class is ctypes.Structure else "union"
         return type(type_name, (base_class,), {"_fields_": fields})
 
