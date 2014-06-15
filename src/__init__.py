@@ -15,21 +15,10 @@
 from functools import wraps
 import inspect
 import ctypes
-from _ctypes import CFuncPtr, FUNCFLAG_CDECL
+from _ctypes import CFuncPtr as _CFuncPtr, FUNCFLAG_CDECL as _FUNCFLAG_CDECL
 
 from _jit import *
 
-# XXX: This would be nice to have as a regular instance method on
-#      jit.Context. We cannot monkey-patch the type though since this is not
-#      allowed for extension types. Implementing a decorator in C is kind of
-#      a hassle on the other hand. Maybe we could use a static extension method
-#      in C which just stores the function object of `builds_function' in
-#      the extension code and then delegate the call to the proper
-#      `builds_function' instance method to the one defined here. Another
-#      possibility would be to let the jit.Context c'tor accept a single
-#      argument if said delegation object hasn't been set yet. Since we set
-#      it here, the type will always be initialized properly. The only problem
-#      is that users could theoretically import _jit.Context manually.
 def builds_function(context, signature):
     num_params = signature.num_params()
 
@@ -80,16 +69,58 @@ def builds_function(context, signature):
         return wrapper
     return decorator
 
-class Closure(CFuncPtr):
-    # XXX: This should depend on the calling convention of the wrapped
-    #      function. Unfortunately it means we have to create the wrapper class
-    #      dynamically since _flags_ has to be set during class creation. We
-    #      could just cache it under the appropriate jit.ABI_* key.
-    _flags_ = FUNCFLAG_CDECL
+class Closure(_CFuncPtr):
+    _flags_ = _FUNCFLAG_CDECL
+
+    _LIBJIT_TO_CTYPES = {
+        Type.VOID: None,
+        Type.SBYTE: ctypes.c_byte,
+        Type.UBYTE: ctypes.c_ubyte,
+        Type.USHORT: ctypes.c_ushort,
+        Type.SHORT: ctypes.c_short,
+        Type.INT: ctypes.c_int,
+        Type.UINT: ctypes.c_uint,
+        # XXX: These are either int or long, but which is it?
+        # Type.NINT: ...,
+        # Type.NUINT: ...,
+        Type.LONG: ctypes.c_long,
+        Type.ULONG: ctypes.c_ulong,
+        Type.FLOAT32: ctypes.c_float,
+        Type.FLOAT64: ctypes.c_double,
+        Type.NFLOAT: ctypes.c_longdouble,
+        Type.VOID_PTR: ctypes.c_void_p,
+
+        # TODO: Add system types.
+        Type.SYS_BOOL: ctypes.c_bool
+    }
+
+    """
+    c_bool	_Bool	bool (1)
+    c_char	char	1-character string
+    c_wchar	wchar_t	1-character unicode string
+    c_byte	char	int/long
+    c_ubyte	unsigned char	int/long
+    c_short	short	int/long
+    c_ushort	unsigned short	int/long
+    c_int	int	int/long
+    c_uint	unsigned int	int/long
+    c_long	long	int/long
+    c_ulong	unsigned long	int/long
+    c_longlong	__int64 or long long	int/long
+    c_ulonglong	unsigned __int64 or unsigned long long	int/long
+    c_float	float	float
+    c_double	double	float
+    c_longdouble	long double	float
+    c_char_p	char * (NUL terminated)	string or None
+    c_wchar_p	wchar_t * (NUL terminated)	unicode or None
+    c_void_p	void *	int/long or None
+    """
 
     def __new__(cls, function):
         if not isinstance(function, Function):
             raise TypeError("function must be an instance of jit.Function")
+        if function.get_signature().get_abi() != ABI_CDECL:
+            raise ValueError("function must use the CDECL calling convention")
         if not function.is_compiled():
             function.compile_()
         addr = function.to_closure()
@@ -100,7 +131,23 @@ class Closure(CFuncPtr):
     def __init__(self, function):
         super(Closure, self).__init__()
         self._function = function
-        # TODO: Use the function signature to annotate the wrapped FuncPtr.
-        self.restype = ctypes.c_int
-        self.argtypes = [ctypes.c_int]
+        signature = function.get_signature()
+        self.restype = self._convert_libjit_to_ctypes(signature.get_return())
+        self.argtypes = [self._convert_libjit_to_ctypes(signature.get_param(i))
+                         for i in range(signature.num_params())]
+
+    def _convert_libjit_to_ctypes(self, type_):
+        if type_.is_primitive():
+            try:
+                return self._LIBJIT_TO_CTYPES[type_]
+            except KeyError:
+                pass
+        # TODO: These two need to recurse over their fields.
+        elif type_.is_struct():
+            raise NotImplementedError
+        elif type_.is_union():
+            raise NotImplementedError
+        raise ValueError(
+            "failed to determine ctypes equivalent of jit.Type '%s'" %
+            type_.get_name())
 
