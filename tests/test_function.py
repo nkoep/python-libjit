@@ -53,15 +53,6 @@ class TestFunction(unittest.TestCase):
             arg = 220
         self.assertEqual(function(None, arg), arg)
 
-    def test_closure(self):
-        with jit.Context() as context:
-            signature = jit.Type.create_signature(
-                jit.ABI_CDECL, jit.Type.INT, (jit.Type.INT,))
-            function = jit.Function(context, signature)
-            function.insn_return(function.value_get_param(0) * 3)
-            closure = jit.Closure(function)
-            self.assertEqual(closure(5), 15)
-
     def test_decorator(self):
         context = jit.Context()
         signature = jit.Type.create_signature(
