@@ -764,6 +764,9 @@ do {                                                                \
         return -1;                                                  \
 } while (0)
 
+    /* Platform-agnostic types, e.g. jit_type_int always describes 32-bit
+     * wide signed integers
+     */
     REGISTER_TYPE(void);
     REGISTER_TYPE(sbyte);
     REGISTER_TYPE(ubyte);
@@ -780,6 +783,9 @@ do {                                                                \
     REGISTER_TYPE(nfloat);
     REGISTER_TYPE(void_ptr);
 
+    /* System types, e.g. jit_type_sys_int may describe a 32- or 64-bit signed
+     * integer depending on the platform's architecture
+     */
     REGISTER_TYPE(sys_bool);
     REGISTER_TYPE(sys_char);
     REGISTER_TYPE(sys_schar);

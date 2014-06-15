@@ -69,20 +69,33 @@ def builds_function(context, signature):
         return wrapper
     return decorator
 
+def _determine_nint_type(**kwargs):
+    if not (len(kwargs) == 1 and "signed" in kwargs):
+        raise ValueError("need keyword argument 'signed'")
+    signed = kwargs["signed"]
+    pointer_size = ctypes.sizeof(ctypes.c_void_p)
+    if pointer_size == 4:
+        return ctypes.c_int32 if signed else ctypes.c_uint32
+    elif pointer_size == 8:
+        return ctypes.c_int64 if signed else ctypes.c_uint64
+    raise TypeError("unsupported pointer size")
+
 class Closure(_CFuncPtr):
     _flags_ = _FUNCFLAG_CDECL
 
     _LIBJIT_TO_CTYPES = {
+        # Platform-agnostic types
         Type.VOID: None,
         Type.SBYTE: ctypes.c_byte,
         Type.UBYTE: ctypes.c_ubyte,
         Type.USHORT: ctypes.c_ushort,
-        Type.SHORT: ctypes.c_short,
-        Type.INT: ctypes.c_int,
-        Type.UINT: ctypes.c_uint,
-        # XXX: These are either int or long, but which is it?
-        # Type.NINT: ...,
-        # Type.NUINT: ...,
+        Type.SHORT: ctypes.c_int16,
+        Type.INT: ctypes.c_int32,
+        Type.UINT: ctypes.c_uint32,
+        # `nint' represents types with the same width and alignment as pointers
+        # on the current platform.
+        Type.NINT: _determine_nint_type(signed=True),
+        Type.NUINT: _determine_nint_type(signed=False),
         Type.LONG: ctypes.c_long,
         Type.ULONG: ctypes.c_ulong,
         Type.FLOAT32: ctypes.c_float,
@@ -90,31 +103,23 @@ class Closure(_CFuncPtr):
         Type.NFLOAT: ctypes.c_longdouble,
         Type.VOID_PTR: ctypes.c_void_p,
 
-        # TODO: Add system types.
-        Type.SYS_BOOL: ctypes.c_bool
+        # System types
+        Type.SYS_BOOL: ctypes.c_bool,
+        Type.SYS_CHAR: ctypes.c_char,
+        Type.SYS_SCHAR: ctypes.c_byte,
+        Type.SYS_UCHAR: ctypes.c_ubyte,
+        Type.SYS_SHORT: ctypes.c_short,
+        Type.SYS_USHORT: ctypes.c_ushort,
+        Type.SYS_INT: ctypes.c_int,
+        Type.SYS_UINT: ctypes.c_uint,
+        Type.SYS_LONG: ctypes.c_long,
+        Type.SYS_ULONG: ctypes.c_ulong,
+        Type.SYS_LONGLONG: ctypes.c_longlong,
+        Type.SYS_ULONGLONG: ctypes.c_ulonglong,
+        Type.SYS_FLOAT: ctypes.c_float,
+        Type.SYS_DOUBLE: ctypes.c_double,
+        Type.SYS_LONG_DOUBLE: ctypes.c_longdouble
     }
-
-    """
-    c_bool	_Bool	bool (1)
-    c_char	char	1-character string
-    c_wchar	wchar_t	1-character unicode string
-    c_byte	char	int/long
-    c_ubyte	unsigned char	int/long
-    c_short	short	int/long
-    c_ushort	unsigned short	int/long
-    c_int	int	int/long
-    c_uint	unsigned int	int/long
-    c_long	long	int/long
-    c_ulong	unsigned long	int/long
-    c_longlong	__int64 or long long	int/long
-    c_ulonglong	unsigned __int64 or unsigned long long	int/long
-    c_float	float	float
-    c_double	double	float
-    c_longdouble	long double	float
-    c_char_p	char * (NUL terminated)	string or None
-    c_wchar_p	wchar_t * (NUL terminated)	unicode or None
-    c_void_p	void *	int/long or None
-    """
 
     def __new__(cls, function):
         if not isinstance(function, Function):
@@ -142,12 +147,20 @@ class Closure(_CFuncPtr):
                 return self._LIBJIT_TO_CTYPES[type_]
             except KeyError:
                 pass
-        # TODO: These two need to recurse over their fields.
+        elif type_.is_pointer():
+            ref_type = type_.get_ref()
+            return ctypes.POINTER(self._convert_libjit_to_ctypes(ref_type))
         elif type_.is_struct():
-            raise NotImplementedError
+            self._create_aggregate_type(ctypes.Structure, type_)
         elif type_.is_union():
-            raise NotImplementedError
+            self._create_aggregate_type(ctypes.Union, type_)
         raise ValueError(
             "failed to determine ctypes equivalent of jit.Type '%s'" %
             type_.get_name())
+
+    def _create_aggregate_type(self, base_class, type_):
+        fields = [self._convert_libjit_to_ctypes(type_.get_field(i))
+                  for i in range(type_.num_fields())]
+        type_name = "struct" if base_class is ctypes.Structure else "union"
+        return type(type_name, (base_class,), {"_fields_": fields})
 
