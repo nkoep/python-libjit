@@ -69,7 +69,8 @@ static method `jit.Value.get_param`.
 In contrast to regular LibJIT functions which are organized into distinct
 classes, preprocessor constants are exposed in the `jit` module itself with
 their common `JIT` prefix stripped off, e.g. `JIT_TYPE_INT` corresponds to
-`jit.TYPE_INT`.
+`jit.TYPE_INT`. Note that members of the `jit_abi_t` enum are also treated as
+preprocessor constants and are therefore exposed as `jit.ABI_CDECL`, etc.
 
 ### Primitive Types
 When building a function, it is necessary to specify the function's signature
