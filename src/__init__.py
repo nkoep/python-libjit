@@ -161,7 +161,7 @@ class Closure(_CFuncPtr):
 
     @staticmethod
     def _create_aggregate_type(base_class, type_):
-        num_anonymous = 0
+        num_anonymous = 1
         names = set()
         fields = []
         for i in range(type_.num_fields()):
@@ -170,7 +170,7 @@ class Closure(_CFuncPtr):
             # avoid name collisions, we keep track of already used names.
             if name is None:
                 while True:
-                    name = str(num_anonymous)
+                    name = "%%%d" % num_anonymous
                     num_anonymous += 1
                     if name not in names:
                         break

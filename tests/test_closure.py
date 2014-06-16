@@ -59,6 +59,6 @@ class TestClosure(unittest.TestCase):
         # been filled automatically.
         types = (ctypes.c_float, ctypes.c_double)
         for idx in range(len(fields)):
-            self.assertEqual(fields[idx][0], str(idx))
+            self.assertEqual(fields[idx][0], "%%%d" % (idx+1))
             self.assertIs(types[idx], types[idx])
 
