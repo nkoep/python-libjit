@@ -140,8 +140,10 @@ PyJitLabel_New(jit_label_t label)
        PyJitLabel *jit_label = PyObject_New(PyJitLabel, &PyJitLabel_Type);
        jit_label->label = label;
        object = (PyObject *)jit_label;
-       if (pyjit_weak_cache_setitem(label_cache, numkey, object) < 0)
+       if (pyjit_weak_cache_setitem(label_cache, numkey, object) < 0) {
+           Py_DECREF(object);
            return NULL;
+       }
     }
     return object;
 }

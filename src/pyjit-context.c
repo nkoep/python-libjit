@@ -282,8 +282,10 @@ PyJitContext_New(jit_context_t context)
        PyJitContext *ctx = PyObject_New(PyJitContext, &PyJitContext_Type);
        ctx->context = context;
        object = (PyObject *)ctx;
-       if (pyjit_weak_cache_setitem(context_cache, numkey, object) < 0)
+       if (pyjit_weak_cache_setitem(context_cache, numkey, object) < 0) {
+           Py_DECREF(object);
            return NULL;
+       }
     }
     return object;
 }

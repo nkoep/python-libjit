@@ -755,7 +755,8 @@ PyObject *
 PyJitFunction_New(jit_function_t function)
 {
     /* This function doesn't really create new function wrappers. Instead, it
-     * only returns cached instances which means cache misses indicate bugs.
+     * only returns cached instances which means a failed lookup indicates a
+     * bug.
      */
     long numkey;
     PyObject *object;
